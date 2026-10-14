@@ -90,17 +90,43 @@
         </div>
       </aside>
 
+            ```html
       <div class="floating-controls" aria-label="أزرار التحكم">
-        <button id="zoomInBtn" class="round-btn" title="تكبير">+</button>
-        <button id="zoomOutBtn" class="round-btn" title="تصغير">−</button>
-        <button id="basemapBtn" class="round-btn" title="تبديل الخريطة">🗺️</button>
-        <button id="themeBtn" class="round-btn" title="الوضع الداكن/الفاتح">🌙</button>
-        <button id="resetBtn" class="round-btn" title="عرض نطاق جميع النقاط">🔄</button>
-        <button id="locateBtn" class="round-btn" title="موقعي">📍</button>
-        <button id="measureBtn" class="round-btn" title="قياس المسافة">📏</button>
-        <button id="routingBtn" class="round-btn" title="وضع التوجيه">🧭</button>
-        <button id="nearestBtn" class="round-btn" title="أقرب موقع">🧭</button>
+
+        <button id="zoomInBtn" class="round-btn" title="تكبير" aria-label="تكبير">
+          <i data-lucide="plus"></i>
+        </button>
+
+        <button id="zoomOutBtn" class="round-btn" title="تصغير" aria-label="تصغير">
+          <i data-lucide="minus"></i>
+        </button>
+
+        <button id="basemapBtn" class="round-btn" title="تبديل الخريطة" aria-label="تبديل الخريطة">
+          <i data-lucide="layers-3"></i>
+        </button>
+
+        <button id="themeBtn" class="round-btn" title="الوضع الداكن/الفاتح" aria-label="تبديل الوضع">
+          <i data-lucide="moon-star"></i>
+        </button>
+
+        <button id="resetBtn" class="round-btn" title="عرض نطاق جميع النقاط" aria-label="عرض جميع النقاط">
+          <i data-lucide="maximize"></i>
+        </button>
+
+        <button id="locateBtn" class="round-btn" title="موقعي" aria-label="موقعي">
+          <i data-lucide="locate-fixed"></i>
+        </button>
+
+        <button id="measureBtn" class="round-btn" title="قياس المسافة" aria-label="قياس المسافة">
+          <i data-lucide="ruler"></i>
+        </button>
+
+        <button id="nearestBtn" class="round-btn" title="أقرب موقع" aria-label="أقرب موقع">
+          <i data-lucide="compass"></i>
+        </button>
+
       </div>
+```
 
       <section id="routingPanel" class="routing-panel" aria-label="لوحة التوجيه">
         <div class="routing-header">
@@ -163,5 +189,12 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
     <script type="module" src="./js/app.js"></script>
+
+        
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      lucide.createIcons();
+    </script>
+
   </body>
 </html>

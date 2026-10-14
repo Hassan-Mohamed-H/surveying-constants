@@ -871,7 +871,11 @@ function bindMapControls() {
     uiEls.locateBtn.addEventListener(
       "click",
       () => {
-        locateUser();
+        const isActive = uiEls.locateBtn.classList.toggle("active");
+
+        if (isActive) {
+          locateUser();
+        }
       }
     );
   }
@@ -889,6 +893,7 @@ function bindMapControls() {
         setMeasureMode(
           isActive
         );
+        uiEls.measureBtn.setAttribute("aria-pressed", String(isActive));
 
         if (isActive) {
           notify(
@@ -941,27 +946,49 @@ function bindMapControls() {
 
   // Nearest Point
   
+  
+  let nearestLineVisible = false;
+
   if (uiEls.nearestBtn) {
     uiEls.nearestBtn.addEventListener("click", async () => {
+      // لو الخط مرسوم، شيله
+      if (nearestLineVisible) {
+        clearRoute();
+        nearestLineVisible = false;
+        uiEls.nearestBtn.classList.remove("active");
+
+        const nearestNameEl = document.getElementById("nearestName");
+        const nearestDistanceEl = document.getElementById("nearestDistance");
+
+        if (nearestNameEl) nearestNameEl.textContent = "-";
+        if (nearestDistanceEl) nearestDistanceEl.textContent = "-";
+
+        notify("تم إخفاء الخط.");
+        return;
+      }
+
+      // لو الخط مش مرسوم، حدّد أقرب نقطة وارسمه
       try {
         const nearest = await findNearestSite(filteredMapData);
 
         if (!nearest) return;
+
+        nearestLineVisible = true;
+        uiEls.nearestBtn.classList.add("active");
 
         updateNearest(
           nearest.name || nearest.code || "نقطة مساحية",
           nearest.distanceText
         );
 
-        notify(
-          `أقرب نقطة: ${nearest.name || nearest.code || "نقطة مساحية"} — المسافة ${nearest.distanceText}`
-        );
+        notify(`المسافة إلى أقرب نقطة: ${nearest.distanceText}`);
       } catch (error) {
         console.error("Nearest point error:", error);
         notify("تعذر تحديد أقرب نقطة.", true);
       }
     });
   }
+
 
 }
 

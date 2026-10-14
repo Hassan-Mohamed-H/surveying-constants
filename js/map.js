@@ -2,6 +2,9 @@ import { createBatchProcessor } from "./performance.js";
 import { queryNearest } from "./spatialIndex.js";
 import proj4 from "https://cdn.jsdelivr.net/npm/proj4@2.15.0/+esm";
 
+import { getWaybackItemsWithLocalChanges } from "https://cdn.jsdelivr.net/npm/@esri/wayback-core/+esm";
+
+
 // ===============================
 // Map Constants
 // ===============================
@@ -356,6 +359,70 @@ export async function prepareMapData(
   return converted;
 }
 
+
+// ===============================
+// updateLatestImagery
+// ===============================
+
+let imageryUpdateRequest = 0;
+let imageryUpdateTimer = null;
+
+async function updateLatestImagery() {
+  if (!map || !satelliteLayer) return;
+
+  const requestId = ++imageryUpdateRequest;
+  const center = map.getCenter();
+  const zoom = map.getZoom();
+
+  try {
+    const versions = await getWaybackItemsWithLocalChanges(
+      {
+        latitude: center.lat,
+        longitude: center.lng,
+      },
+      zoom
+    );
+
+    if (
+      requestId !== imageryUpdateRequest ||
+      !versions?.length
+    ) {
+      return;
+    }
+
+    const latestVersion = versions[0];
+
+    const tileUrl = latestVersion.itemURL
+      .replace("{level}", "{z}")
+      .replace("{row}", "{y}")
+      .replace("{col}", "{x}");
+
+    if (satelliteLayer._url !== tileUrl) {
+      satelliteLayer.setUrl(tileUrl);
+    }
+
+    console.log(
+      "إصدار الصور الفضائية:",
+      latestVersion.releaseDateLabel
+    );
+  } catch (error) {
+    console.error(
+      "تعذر تحديث إصدار الصور الفضائية:",
+      error
+    );
+  }
+}
+
+function scheduleImageryUpdate() {
+  clearTimeout(imageryUpdateTimer);
+
+  imageryUpdateTimer = setTimeout(() => {
+    updateLatestImagery();
+  }, 700);
+}
+
+
+
 // ===============================
 // Initialize Map
 // ===============================
@@ -368,6 +435,8 @@ export function initMap() {
   map = L.map("map", {
     zoomControl: false,
     preferCanvas: true,
+    minZoom: 2,
+    maxZoom: 25
   }).setView(
     DEFAULT_CENTER,
     DEFAULT_ZOOM
@@ -398,13 +467,19 @@ export function initMap() {
   satelliteLayer = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     {
-      maxZoom: 20,
+      minZoom: 2,
+      maxZoom: 25,
+      maxNativeZoom: 18,
       attribution:
         "Tiles &copy; Esri",
     }
   );
 
-  lightLayer.addTo(map);
+satelliteLayer.addTo(map);
+activeTileName = "satellite";
+
+map.on("moveend", scheduleImageryUpdate);
+updateLatestImagery();
 
   // ===============================
   // Marker Cluster
@@ -515,53 +590,45 @@ function getStatusColor(
 // Create Marker
 // ===============================
 
-function createSurveyMarker(
-  item
-) {
-  const color =
-    getStatusColor(
-      item.status
-    );
 
-  const marker =
-    L.circleMarker(
-      [
-        item.lat,
-        item.lng,
-      ],
-      {
-        radius: 8,
-        color: "#ffffff",
-        weight: 2,
-        fillColor: color,
-        fillOpacity: 0.9,
-      }
-    );
 
-  marker.bindTooltip(
-    item.name ||
-      item.code ||
-      "نقطة مساحية",
-    {
-      direction: "top",
-      offset: [0, -8],
-    }
-  );
 
-  marker.on(
-    "click",
-    () => {
-      openSidePanel(
-        item
-      );
-    }
-  );
 
-  marker.__surveyItem =
-    item;
 
+
+
+
+function createSurveyMarker(item) {
+  const color = getStatusColor(item.status);
+  const label = String(item.name || item.code || "نقطة مساحية");
+
+  const marker = L.circleMarker([item.lat, item.lng], {
+    radius: 6,
+    color: "#ffffff",
+    weight: 2,
+    fillColor: color,
+    fillOpacity: 0.95,
+  });
+
+  marker.bindTooltip(escapeHtml(label), {
+    permanent: true,
+    direction: "top",
+    offset: [10, -10],
+    opacity: 1,
+    className: "survey-point-label",
+    interactive: false,
+    bubblingMouseEvents: false,
+  });
+
+  marker.on("click", () => {
+    openSidePanel(item);
+  });
+
+  marker.__surveyItem = item;
   return marker;
 }
+
+
 
 // ===============================
 // Set Markers
@@ -1283,15 +1350,18 @@ export function addMeasurePoint(
       measureLayer
     );
 
-    const distance =
-      map.distance(
-        previous,
-        latlng
-      );
+    const distance = map.distance(previous, latlng);
 
-    console.log(
-      `Distance: ${distance.toFixed(2)} m`
-    );
+    const distanceText = distance >= 1000
+      ? `${(distance / 1000).toFixed(2)} كم`
+      : `${Math.round(distance)} متر`;
+
+    // تحديث خانة المسافة في السايد بار
+    const distanceElement = document.getElementById("nearestDistance");
+
+    if (distanceElement) {
+      distanceElement.textContent = distanceText;
+    }
   }
 }
 
@@ -1300,6 +1370,12 @@ export function clearMeasurement() {
 
   if (measureLayer) {
     measureLayer.clearLayers();
+  }
+
+  const distanceElement = document.getElementById("nearestDistance");
+
+  if (distanceElement) {
+    distanceElement.textContent = "-";
   }
 }
 
@@ -1620,4 +1696,14 @@ export function getMapState() {
     routingMode,
     userLatLng,
   };
+}
+
+
+
+function setToolActive(buttonId, isActive) {
+  const button = document.getElementById(buttonId);
+  if (!button) return;
+
+  button.classList.toggle("is-active", isActive);
+  button.setAttribute("aria-pressed", String(isActive));
 }

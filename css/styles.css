@@ -1495,3 +1495,116 @@ body.dark-mode #resetSurveyFilters:hover { background: rgba(45, 212, 191, 0.17);
     transition: none !important;
   }
 }
+
+
+/* اسم النقطة داخل مربع صغير فوق العلامة */
+.leaflet-tooltip.survey-point-label {
+  background: #ffffff !important;
+  color: #222222 !important;
+
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  border-radius: 7px !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15) !important;
+
+  padding: 4px 9px !important;
+  margin: 0 !important;
+
+  font-family: "Cairo", "Segoe UI", Tahoma, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  pointer-events: none;
+}
+
+/* إخفاء رأس السهم ليطابق شكل مشروع التراث */
+.leaflet-tooltip.survey-point-label::before {
+  display: none !important;
+}
+
+
+
+
+.floating-controls .round-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #1677e8;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease,
+              color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.floating-controls .round-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2;
+}
+
+.floating-controls .round-btn:hover {
+  transform: translateY(-2px);
+  background: #1677e8;
+  color: #ffffff;
+  box-shadow: 0 7px 18px rgba(22, 119, 232, 0.25);
+}
+
+.floating-controls .round-btn:active {
+  transform: scale(0.94);
+}
+
+.floating-controls .round-btn:focus-visible {
+  outline: 3px solid rgba(22, 119, 232, 0.35);
+  outline-offset: 3px;
+}
+
+
+/* حالة تفعيل أدوات الخريطة */
+.floating-controls .round-btn.is-active {
+  background: #0755c9 !important;
+  color: #ffffff !important;
+  border-color: #0647a8 !important;
+  box-shadow: 0 4px 14px rgba(7, 85, 201, 0.35);
+}
+
+.floating-controls .round-btn.is-active svg {
+  stroke: #ffffff;
+}
+
+/* تأثير بسيط عند تفعيل الأداة */
+.floating-controls .round-btn.is-active:hover {
+  background: #0647a8 !important;
+  transform: translateY(-1px);
+}
+
+/* شكل أيقونة موقعي الحالي */
+#locateBtn svg {
+  width: 23px;
+  height: 23px;
+  stroke-width: 2.2;
+}
+
+
+
+.floating-controls .round-btn.active {
+  background-color: #0647A8 !important;
+  color: #fff !important;
+  border-color: #0647A8 !important;
+  box-shadow: 0 0 0 3px rgba(6, 71, 168, 0.18);
+}
+
+.floating-controls .round-btn.active svg {
+  color: #fff !important;
+  stroke: #fff !important;
+}
