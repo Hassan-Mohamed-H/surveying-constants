@@ -1608,3 +1608,140 @@ body.dark-mode #resetSurveyFilters:hover { background: rgba(45, 212, 191, 0.17);
   color: #fff !important;
   stroke: #fff !important;
 }
+
+
+/* قائمة أدوات الخريطة القابلة للفتح على شاشات الهاتف فقط */
+.tools-toggle-btn {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .floating-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    max-height: calc(100dvh - 180px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px;
+    scrollbar-width: none;
+  }
+
+  .floating-controls::-webkit-scrollbar {
+    display: none;
+  }
+
+  .floating-controls .tools-toggle-btn {
+    display: flex;
+    flex: 0 0 auto;
+    order: -1;
+    background: #0755c9;
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+
+  .floating-controls:not(.tools-expanded) .round-btn:not(.tools-toggle-btn) {
+    display: none;
+  }
+
+  .floating-controls.tools-expanded .round-btn:not(.tools-toggle-btn) {
+    display: flex;
+    flex: 0 0 auto;
+  }
+}
+
+
+/* تحسينات الخطوة الثانية: لوحة البيانات وإخفاؤها بالكامل على الهاتف */
+.sidebar-reopen {
+  display: none;
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 1102;
+  width: 38px;
+  height: 58px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,.45);
+  border-right: 0;
+  border-radius: 14px 0 0 14px;
+  background: #0755c9;
+  color: #fff;
+  box-shadow: 0 5px 18px rgba(15,23,42,.22);
+  cursor: pointer;
+}
+.sidebar-reopen svg { width: 20px; height: 20px; }
+
+/* لا نترك شريطًا من لوحة البيانات ظاهرًا عند طيها */
+@media (max-width: 900px) {
+  .sidebar {
+    z-index: 1101;
+    transition: transform .28s ease, visibility .28s ease;
+    will-change: transform;
+  }
+  .sidebar.collapsed {
+    transform: translateX(calc(100% + 16px));
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .sidebar.collapsed .sidebar-toggle { pointer-events: none; }
+  .sidebar-reopen.visible { display: flex; }
+  .sidebar-content {
+    max-height: calc(100dvh - 150px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* ترتيب مريح للمحتوى على شاشة الهاتف */
+@media (max-width: 520px) {
+  .sidebar {
+    top: 116px;
+    right: 8px;
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 132px);
+    border-radius: 18px;
+  }
+  .sidebar-content {
+    padding: 14px 13px 22px;
+    max-height: calc(100dvh - 150px);
+  }
+  .sidebar h2 { font-size: 18px; margin-bottom: 10px; }
+  .sidebar h3 { font-size: 14px; margin-bottom: 9px; }
+  .survey-help { font-size: 12px; line-height: 1.7; padding: 9px 10px; }
+  .panel-section:has(.survey-filter) { padding: 12px; margin-top: 11px; }
+  .filter-item { margin: 9px 2px 5px; }
+  .survey-filter { min-height: 42px; font-size: 13px; }
+  .stats p { padding: 9px 10px; font-size: 12px; }
+  #visibleCount, #totalCount { font-size: 16px; }
+  .legend-item { padding: 7px 8px; font-size: 12px; }
+  .dashboard { padding: 10px; margin-top: 10px; }
+  .dashboard canvas { height: 175px !important; margin: 8px 0; padding: 6px; }
+  .geojson-actions { flex-direction: column; }
+  .geojson-actions .search-btn { width: 100%; }
+
+  /* لوحة تفاصيل النقطة تأخذ الشاشة دون بروز حواف عند الإغلاق */
+  .side-panel {
+    width: 100vw;
+    max-width: 100vw;
+    left: 0;
+    right: auto;
+    transform: translate3d(0,0,0);
+    visibility: visible;
+    transition: transform .28s ease, visibility .28s ease;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .side-panel.hidden {
+    transform: translate3d(-105%,0,0);
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .panel-gallery, .panel-gallery-track img { height: 190px; }
+  .panel-body { padding: 14px 14px calc(20px + env(safe-area-inset-bottom)); }
+  #panelTitle { font-size: 21px; line-height: 1.45; }
+  .panel-row { align-items: flex-start; gap: 8px; }
+  .panel-row strong { max-width: 42%; white-space: normal; }
+  .panel-row span { max-width: 58%; overflow-wrap: anywhere; }
+}

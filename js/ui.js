@@ -1,3 +1,4 @@
+
 function byId(id) {
   return document.getElementById(id);
 }
@@ -69,18 +70,13 @@ export function showLoading(show) {
 // Point Counts
 // ===============================
 
-export function updateCounts(
-  visible = 0,
-  total = 0
-) {
+export function updateCounts(visible = 0, total = 0) {
   if (uiEls.visibleCount) {
-    uiEls.visibleCount.textContent =
-      String(visible);
+    uiEls.visibleCount.textContent = String(visible);
   }
 
   if (uiEls.totalCount) {
-    uiEls.totalCount.textContent =
-      String(total);
+    uiEls.totalCount.textContent = String(total);
   }
 }
 
@@ -93,13 +89,11 @@ export function updateNearest(
   distanceText = "-"
 ) {
   if (uiEls.nearestName) {
-    uiEls.nearestName.textContent =
-      name;
+    uiEls.nearestName.textContent = name;
   }
 
   if (uiEls.nearestDistance) {
-    uiEls.nearestDistance.textContent =
-      distanceText;
+    uiEls.nearestDistance.textContent = distanceText;
   }
 }
 
@@ -113,30 +107,22 @@ export function notify(
   ms = 3000
 ) {
   if (!uiEls.toastContainer) {
-    console[
-      isError ? "error" : "log"
-    ](message);
-
+    console[isError ? "error" : "log"](message);
     return;
   }
 
-  const toast =
-    document.createElement("div");
+  const toast = document.createElement("div");
 
-  toast.className =
-    `toast ${isError ? "error" : ""}`;
+  toast.className = `toast ${isError ? "error" : ""}`;
 
   toast.setAttribute(
     "role",
     isError ? "alert" : "status"
   );
 
-  toast.textContent =
-    String(message ?? "");
+  toast.textContent = String(message ?? "");
 
-  uiEls.toastContainer.appendChild(
-    toast
-  );
+  uiEls.toastContainer.appendChild(toast);
 
   window.setTimeout(() => {
     toast.remove();
@@ -159,40 +145,23 @@ export function renderCategoryFilters(
   uiEls.categoryFilters.innerHTML = "";
 
   categories.forEach((category) => {
-    const label =
-      document.createElement("label");
-
+    const label = document.createElement("label");
     label.className = "filter-item";
 
-    const input =
-      document.createElement("input");
-
+    const input = document.createElement("input");
     input.type = "checkbox";
     input.value = category;
+    input.checked = selectedCategories.has(category);
 
-    input.checked =
-      selectedCategories.has(category);
-
-    const text =
-      document.createElement("span");
-
+    const text = document.createElement("span");
     text.textContent = category;
 
-    input.addEventListener(
-      "change",
-      (event) => {
-        onChange(
-          category,
-          event.target.checked
-        );
-      }
-    );
+    input.addEventListener("change", (event) => {
+      onChange(category, event.target.checked);
+    });
 
     label.append(input, text);
-
-    uiEls.categoryFilters.appendChild(
-      label
-    );
+    uiEls.categoryFilters.appendChild(label);
   });
 }
 
@@ -200,38 +169,27 @@ export function renderCategoryFilters(
 // Legend
 // ===============================
 
-export function renderLegend(
-  palette = {}
-) {
+export function renderLegend(palette = {}) {
   if (!uiEls.legend) {
     return;
   }
 
   uiEls.legend.innerHTML = "";
 
-  Object.entries(palette).forEach(
-    ([label, color]) => {
-      const item =
-        document.createElement("div");
+  Object.entries(palette).forEach(([label, color]) => {
+    const item = document.createElement("div");
+    item.className = "legend-item";
 
-      item.className = "legend-item";
+    const swatch = document.createElement("span");
+    swatch.className = "legend-color";
+    swatch.style.backgroundColor = color;
 
-      const swatch =
-        document.createElement("span");
+    const text = document.createElement("span");
+    text.textContent = label;
 
-      swatch.className = "legend-color";
-      swatch.style.backgroundColor = color;
-
-      const text =
-        document.createElement("span");
-
-      text.textContent = label;
-
-      item.append(swatch, text);
-
-      uiEls.legend.appendChild(item);
-    }
-  );
+    item.append(swatch, text);
+    uiEls.legend.appendChild(item);
+  });
 }
 
 // ===============================
@@ -239,30 +197,68 @@ export function renderLegend(
 // ===============================
 
 export function bindSidebarToggle() {
-  if (
-    !uiEls.toggleSidebarBtn ||
-    !uiEls.sidebar
-  ) {
+  if (!uiEls.toggleSidebarBtn || !uiEls.sidebar) {
     return;
   }
 
-  uiEls.toggleSidebarBtn.addEventListener(
-    "click",
-    () => {
-      const isCollapsed =
-        uiEls.sidebar.classList.toggle(
-          "collapsed"
-        );
+  const reopenBtn = byId("reopenSidebarBtn");
 
-      uiEls.toggleSidebarBtn.textContent =
-        isCollapsed ? "❯" : "❮";
+  const setCollapsed = (collapsed) => {
+    uiEls.sidebar.classList.toggle("collapsed", collapsed);
 
-      uiEls.toggleSidebarBtn.title =
-        isCollapsed
-          ? "إظهار اللوحة"
-          : "طي اللوحة";
+    uiEls.toggleSidebarBtn.textContent =
+      collapsed ? "❯" : "❮";
+
+    uiEls.toggleSidebarBtn.title =
+      collapsed ? "إظهار اللوحة" : "طي اللوحة";
+
+    uiEls.toggleSidebarBtn.setAttribute(
+      "aria-expanded",
+      String(!collapsed)
+    );
+
+    if (reopenBtn) {
+      const showReopenButton =
+        collapsed &&
+        window.matchMedia("(max-width: 900px)").matches;
+
+      reopenBtn.classList.toggle(
+        "visible",
+        showReopenButton
+      );
+
+      reopenBtn.setAttribute(
+        "aria-expanded",
+        String(!collapsed)
+      );
     }
-  );
+  };
+
+  uiEls.toggleSidebarBtn.addEventListener("click", () => {
+    setCollapsed(
+      !uiEls.sidebar.classList.contains("collapsed")
+    );
+  });
+
+  reopenBtn?.addEventListener("click", () => {
+    setCollapsed(false);
+  });
+
+  window.addEventListener("resize", () => {
+    if (!reopenBtn) return;
+
+    const collapsed =
+      uiEls.sidebar.classList.contains("collapsed");
+
+    const showReopenButton =
+      collapsed &&
+      window.matchMedia("(max-width: 900px)").matches;
+
+    reopenBtn.classList.toggle(
+      "visible",
+      showReopenButton
+    );
+  });
 }
 
 // ===============================
@@ -279,9 +275,7 @@ export function bindThemeToggle() {
   let saved = "light";
 
   try {
-    saved =
-      localStorage.getItem(key) ||
-      "light";
+    saved = localStorage.getItem(key) || "light";
   } catch (error) {
     console.warn(
       "تعذر قراءة إعداد المظهر المحفوظ.",
@@ -290,45 +284,35 @@ export function bindThemeToggle() {
   }
 
   function applyTheme(dark) {
-    document.body.classList.toggle(
-      "dark-mode",
-      dark
-    );
+    document.body.classList.toggle("dark-mode", dark);
 
     uiEls.themeBtn.textContent =
       dark ? "☀️" : "🌙";
 
     uiEls.themeBtn.title =
-      dark
-        ? "الوضع الفاتح"
-        : "الوضع الداكن";
+      dark ? "الوضع الفاتح" : "الوضع الداكن";
   }
 
   applyTheme(saved === "dark");
 
-  uiEls.themeBtn.addEventListener(
-    "click",
-    () => {
-      const nowDark =
-        !document.body.classList.contains(
-          "dark-mode"
-        );
+  uiEls.themeBtn.addEventListener("click", () => {
+    const nowDark =
+      !document.body.classList.contains("dark-mode");
 
-      applyTheme(nowDark);
+    applyTheme(nowDark);
 
-      try {
-        localStorage.setItem(
-          key,
-          nowDark ? "dark" : "light"
-        );
-      } catch (error) {
-        console.warn(
-          "تعذر حفظ إعداد المظهر.",
-          error
-        );
-      }
+    try {
+      localStorage.setItem(
+        key,
+        nowDark ? "dark" : "light"
+      );
+    } catch (error) {
+      console.warn(
+        "تعذر حفظ إعداد المظهر.",
+        error
+      );
     }
-  );
+  });
 }
 
 // ===============================
@@ -346,35 +330,24 @@ export function showSuggestions(
   uiEls.searchSuggestions.innerHTML = "";
 
   if (!suggestions.length) {
-    uiEls.searchSuggestions.classList.remove(
-      "visible"
-    );
-
+    uiEls.searchSuggestions.classList.remove("visible");
     return;
   }
 
   suggestions.forEach((item) => {
-    const button =
-      document.createElement("button");
-
+    const button = document.createElement("button");
     button.className = "suggestion-item";
     button.type = "button";
 
-    const title =
-      document.createElement("strong");
+    const title = document.createElement("strong");
 
     title.textContent =
-      item.name ||
-      item.code ||
-      "نقطة مساحية";
+      item.name || item.code || "نقطة مساحية";
 
-    const details =
-      document.createElement("small");
+    const details = document.createElement("small");
 
     details.textContent = [
-      item.code
-        ? `الكود: ${item.code}`
-        : "",
+      item.code ? `الكود: ${item.code}` : "",
       item.type || "",
       item.crs || ""
     ]
@@ -383,19 +356,14 @@ export function showSuggestions(
 
     button.append(title, details);
 
-    button.addEventListener(
-      "click",
-      () => onSelect(item)
-    );
+    button.addEventListener("click", () => {
+      onSelect(item);
+    });
 
-    uiEls.searchSuggestions.appendChild(
-      button
-    );
+    uiEls.searchSuggestions.appendChild(button);
   });
 
-  uiEls.searchSuggestions.classList.add(
-    "visible"
-  );
+  uiEls.searchSuggestions.classList.add("visible");
 }
 
 // ===============================
@@ -407,10 +375,7 @@ export function hideSuggestions() {
     return;
   }
 
-  uiEls.searchSuggestions.classList.remove(
-    "visible"
-  );
-
+  uiEls.searchSuggestions.classList.remove("visible");
   uiEls.searchSuggestions.innerHTML = "";
 }
 
@@ -424,27 +389,16 @@ let barChartInstance = null;
 function makeColors(labels) {
   return labels.map((_, index) => {
     const hue = (index * 47) % 360;
-
     return `hsl(${hue}, 70%, 52%)`;
   });
 }
 
-export function renderCharts(
-  counts = {}
-) {
-  const labels =
-    Object.keys(counts);
+export function renderCharts(counts = {}) {
+  const labels = Object.keys(counts);
+  const values = Object.values(counts);
+  const colors = makeColors(labels);
 
-  const values =
-    Object.values(counts);
-
-  const colors =
-    makeColors(labels);
-
-  if (
-    !uiEls.pieChart ||
-    !uiEls.barChart
-  ) {
+  if (!uiEls.pieChart || !uiEls.barChart) {
     return;
   }
 
@@ -452,17 +406,13 @@ export function renderCharts(
   if (!labels.length) {
     if (pieChartInstance) {
       pieChartInstance.data.labels = [];
-
       pieChartInstance.data.datasets[0].data = [];
-
       pieChartInstance.update("none");
     }
 
     if (barChartInstance) {
       barChartInstance.data.labels = [];
-
       barChartInstance.data.datasets[0].data = [];
-
       barChartInstance.update("none");
     }
 
@@ -474,59 +424,52 @@ export function renderCharts(
   // ===============================
 
   if (!pieChartInstance) {
-    pieChartInstance =
-      new Chart(
-        uiEls.pieChart,
-        {
-          type: "doughnut",
+    pieChartInstance = new Chart(uiEls.pieChart, {
+      type: "doughnut",
 
-          data: {
-            labels,
+      data: {
+        labels,
+        datasets: [
+          {
+            data: values,
+            backgroundColor: colors,
+            borderWidth: 1
+          }
+        ]
+      },
 
-            datasets: [
-              {
-                data: values,
-                backgroundColor: colors,
-                borderWidth: 1
-              }
-            ]
-          },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "45%",
 
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: "45%",
+        animation: {
+          duration: 300
+        },
 
-            animation: {
-              duration: 300
-            },
+        plugins: {
+          legend: {
+            position: "bottom",
 
-            plugins: {
-              legend: {
-                position: "bottom",
-
-                labels: {
-                  font: {
-                    family: "Segoe UI"
-                  },
-
-                  boxWidth: 12
-                }
+            labels: {
+              font: {
+                family: "Segoe UI"
               },
 
-              tooltip: {
-                rtl: true
-              }
+              boxWidth: 12
             }
+          },
+
+          tooltip: {
+            rtl: true
           }
         }
-      );
+      }
+    });
   } else {
-    pieChartInstance.data.labels =
-      labels;
+    pieChartInstance.data.labels = labels;
 
-    pieChartInstance.data.datasets[0].data =
-      values;
+    pieChartInstance.data.datasets[0].data = values;
 
     pieChartInstance.data.datasets[0].backgroundColor =
       colors;
@@ -539,67 +482,61 @@ export function renderCharts(
   // ===============================
 
   if (!barChartInstance) {
-    barChartInstance =
-      new Chart(
-        uiEls.barChart,
-        {
-          type: "bar",
+    barChartInstance = new Chart(uiEls.barChart, {
+      type: "bar",
 
-          data: {
-            labels,
+      data: {
+        labels,
 
-            datasets: [
-              {
-                label: "عدد النقاط المساحية",
-                data: values,
-                backgroundColor: colors,
-                borderRadius: 8
-              }
-            ]
+        datasets: [
+          {
+            label: "عدد النقاط المساحية",
+            data: values,
+            backgroundColor: colors,
+            borderRadius: 8
+          }
+        ]
+      },
+
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+
+        animation: {
+          duration: 300
+        },
+
+        scales: {
+          y: {
+            beginAtZero: true,
+
+            ticks: {
+              precision: 0
+            }
           },
 
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-
-            animation: {
-              duration: 300
-            },
-
-            scales: {
-              y: {
-                beginAtZero: true,
-
-                ticks: {
-                  precision: 0
-                }
-              },
-
-              x: {
-                ticks: {
-                  maxRotation: 0
-                }
-              }
-            },
-
-            plugins: {
-              legend: {
-                display: false
-              },
-
-              tooltip: {
-                rtl: true
-              }
+          x: {
+            ticks: {
+              maxRotation: 0
             }
           }
-        }
-      );
-  } else {
-    barChartInstance.data.labels =
-      labels;
+        },
 
-    barChartInstance.data.datasets[0].data =
-      values;
+        plugins: {
+          legend: {
+            display: false
+          },
+
+          tooltip: {
+            rtl: true
+          }
+        }
+      }
+    });
+  } else {
+    barChartInstance.data.labels = labels;
+
+    barChartInstance.data.datasets[0].data = values;
 
     barChartInstance.data.datasets[0].backgroundColor =
       colors;

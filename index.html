@@ -34,10 +34,6 @@
     <div id="app">
       <div id="map"></div>
 
-      <header class="top-header" aria-label="رأس الصفحة">
-        <h1>نظام الثوابت ونقاط التحكم المساحية</h1>
-      </header>
-
       <div class="floating-search">
         <input
           id="searchInput"
@@ -90,8 +86,14 @@
         </div>
       </aside>
 
-            ```html
-      <div class="floating-controls" aria-label="أزرار التحكم">
+      <button id="reopenSidebarBtn" class="sidebar-reopen" type="button" aria-label="فتح لوحة البيانات" title="فتح لوحة البيانات" aria-expanded="false">
+        <i data-lucide="panel-right-open"></i>
+      </button>
+
+      <div class="floating-controls" id="floatingControls" aria-label="أزرار التحكم">
+        <button id="toggleToolsBtn" class="round-btn tools-toggle-btn" type="button" title="فتح أدوات الخريطة" aria-label="فتح أدوات الخريطة" aria-expanded="false">
+          <i data-lucide="menu"></i>
+        </button>
 
         <button id="zoomInBtn" class="round-btn" title="تكبير" aria-label="تكبير">
           <i data-lucide="plus"></i>
@@ -126,7 +128,6 @@
         </button>
 
       </div>
-```
 
       <section id="routingPanel" class="routing-panel" aria-label="لوحة التوجيه">
         <div class="routing-header">
@@ -194,6 +195,28 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
       lucide.createIcons();
+
+      const floatingControls = document.getElementById("floatingControls");
+      const toggleToolsBtn = document.getElementById("toggleToolsBtn");
+
+      if (floatingControls && toggleToolsBtn) {
+        toggleToolsBtn.addEventListener("click", () => {
+          const isExpanded = floatingControls.classList.toggle("tools-expanded");
+          toggleToolsBtn.setAttribute("aria-expanded", String(isExpanded));
+          toggleToolsBtn.setAttribute(
+            "aria-label",
+            isExpanded ? "إغلاق أدوات الخريطة" : "فتح أدوات الخريطة"
+          );
+          toggleToolsBtn.setAttribute(
+            "title",
+            isExpanded ? "إغلاق أدوات الخريطة" : "فتح أدوات الخريطة"
+          );
+          toggleToolsBtn.innerHTML = isExpanded
+            ? '<i data-lucide="x"></i>'
+            : '<i data-lucide="menu"></i>';
+          lucide.createIcons();
+        });
+      }
     </script>
 
   </body>
