@@ -29,6 +29,8 @@ import {
   filterSurveyPoints
 } from "./filters.js";
 
+import { getTypeColor, getStatusColor } from "./colors.js";
+
 // ===============================
 // Data
 // ===============================
@@ -221,178 +223,51 @@ function renderSurveyFilters() {
 // ===============================
 
 function renderSurveyCharts(items = []) {
-  if (typeof Chart === "undefined") return;
+  const typeContainer = document.getElementById("typeSummaryList");
+  const statusContainer = document.getElementById("statusSummaryList");
 
-  const typeCanvas = document.getElementById("pieChart");
-  const statusCanvas = document.getElementById("barChart");
+  if (!typeContainer || !statusContainer) return;
 
-  if (!typeCanvas || !statusCanvas) return;
+  const countBy = (field) => items.reduce((counts, item) => {
+    const key = String(item[field] ?? "").trim() || "غير محدد";
+    counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }, {});
 
-  // ألوان الرسوم
-  const colors = [
-    "#0F766E",
-    "#2563EB",
-    "#7C3AED",
-    "#D97706",
-    "#DB2777",
-    "#0891B2",
-    "#65A30D",
-    "#EA580C"
-  ];
+  const typeCounts = countBy("type");
+  const statusCounts = countBy("status");
 
-  const dark = document.body.classList.contains("dark-mode");
-  const textColor = dark ? "#E2E8F0" : "#334155";
-  const mutedColor = dark ? "#94A3B8" : "#64748B";
-  const gridColor = dark
-    ? "rgba(148,163,184,0.14)"
-    : "rgba(148,163,184,0.20)";
+  const renderList = (container, counts, colorFor) => {
+    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
 
-  const countBy = (field) =>
-    items.reduce((counts, item) => {
-      const key =
-        String(item[field] ?? "").trim() || "غير محدد";
-
-      counts[key] = (counts[key] || 0) + 1;
-      return counts;
-    }, {});
-
-  const types = countBy("type");
-  const statuses = countBy("status");
-
-  if (typeChartInstance) typeChartInstance.destroy();
-  if (statusChartInstance) statusChartInstance.destroy();
-
-  // إعدادات الخطوط والتلميحات
-  const commonPlugins = {
-    legend: {
-      labels: {
-        color: textColor,
-        usePointStyle: true,
-        pointStyle: "circle",
-        boxWidth: 8,
-        padding: 14,
-        font: {
-          family: "Cairo, Segoe UI, sans-serif",
-          size: 11,
-          weight: "600"
-        }
-      }
-    },
-    title: {
-      display: true,
-      color: textColor,
-      padding: { top: 8, bottom: 18 },
-      font: {
-        family: "Cairo, Segoe UI, sans-serif",
-        size: 14,
-        weight: "700"
-      }
-    },
-    tooltip: {
-      rtl: true,
-      backgroundColor: dark ? "#0F172A" : "#FFFFFF",
-      titleColor: textColor,
-      bodyColor: textColor,
-      borderColor: dark ? "#334155" : "#E2E8F0",
-      borderWidth: 1,
-      padding: 12,
-      cornerRadius: 10,
-      titleFont: { weight: "700" }
+    if (!entries.length) {
+      container.innerHTML = '<p class="summary-empty">لا توجد نقاط لعرضها.</p>';
+      return;
     }
+
+    container.innerHTML = entries.map(([label, count]) => {
+      const safeLabel = String(label).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
+      const color = colorFor(label);
+      return `
+        <div class="summary-row">
+          <span class="summary-label">
+            <span class="summary-dot" style="--summary-color:${color}" aria-hidden="true"></span>
+            <span class="summary-name" title="${safeLabel}">${safeLabel}</span>
+          </span>
+          <strong class="summary-count">${count}</strong>
+        </div>`;
+    }).join("");
   };
 
-  // الرسم الدائري
-  typeChartInstance = new Chart(typeCanvas, {
-    type: "doughnut",
-    data: {
-      labels: Object.keys(types),
-      datasets: [{
-        label: "عدد النقاط",
-        data: Object.values(types),
-        backgroundColor: Object.keys(types).map(
-          (_, i) => colors[i % colors.length]
-        ),
-        borderColor: dark ? "#1E293B" : "#FFFFFF",
-        borderWidth: 3,
-        hoverOffset: 7,
-        spacing: 2
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: "68%",
-      animation: { duration: 500 },
-      plugins: {
-        ...commonPlugins,
-        legend: {
-          ...commonPlugins.legend,
-          position: "bottom"
-        },
-        title: {
-          ...commonPlugins.title,
-          text: "توزيع النقاط حسب النوع"
-        }
-      }
-    }
-  });
-
-  // الرسم العمودي
-  statusChartInstance = new Chart(statusCanvas, {
-    type: "bar",
-    data: {
-      labels: Object.keys(statuses),
-      datasets: [{
-        label: "عدد النقاط",
-        data: Object.values(statuses),
-        backgroundColor: Object.keys(statuses).map(
-          (_, i) => colors[i % colors.length]
-        ),
-        borderRadius: 7,
-        borderSkipped: false,
-        maxBarThickness: 42
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: { duration: 500 },
-      plugins: {
-        ...commonPlugins,
-        legend: { display: false },
-        title: {
-          ...commonPlugins.title,
-          text: "توزيع النقاط حسب الحالة"
-        }
-      },
-      scales: {
-        x: {
-          ticks: {
-            color: mutedColor,
-            maxRotation: 0,
-            font: {
-              family: "Cairo, Segoe UI, sans-serif",
-              size: 11
-            }
-          },
-          grid: { display: false },
-          border: { display: false }
-        },
-        y: {
-          beginAtZero: true,
-          ticks: {
-            precision: 0,
-            color: mutedColor,
-            padding: 8
-          },
-          grid: { color: gridColor },
-          border: { display: false }
-        }
-      }
-    }
-  });
-}
-
+  renderList(typeContainer, typeCounts, getTypeColor);
+  renderList(statusContainer, statusCounts, getStatusColor);
+} 
 
 
 // ===============================

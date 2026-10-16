@@ -3,6 +3,7 @@ import { queryNearest } from "./spatialIndex.js";
 import proj4 from "https://cdn.jsdelivr.net/npm/proj4@2.15.0/+esm";
 
 import { getWaybackItemsWithLocalChanges } from "https://cdn.jsdelivr.net/npm/@esri/wayback-core/+esm";
+import { getTypeColor, getStatusColor } from "./colors.js";
 
 
 // ===============================
@@ -548,76 +549,36 @@ export function getMap() {
 // Marker Color
 // ===============================
 
-function getStatusColor(
-  status
-) {
-  if (!status) {
-    return FALLBACK_COLORS[0];
-  }
-
-  const value =
-    String(status)
-      .trim()
-      .toLowerCase();
-
-  if (
-    value.includes("active") ||
-    value.includes("فعال") ||
-    value.includes("نشط")
-  ) {
-    return "#10b981";
-  }
-
-  if (
-    value.includes("inactive") ||
-    value.includes("غير فعال") ||
-    value.includes("غير نشط")
-  ) {
-    return "#ef4444";
-  }
-
-  if (
-    value.includes("maintenance") ||
-    value.includes("صيانة")
-  ) {
-    return "#f59e0b";
-  }
-
-  return FALLBACK_COLORS[0];
-}
-
 // ===============================
 // Create Marker
 // ===============================
 
-
-
-
-
-
-
-
-
 function createSurveyMarker(item) {
-  const color = getStatusColor(item.status);
+  const statusColor = getStatusColor(item.status);
+  const typeColor = getTypeColor(item.type);
   const label = String(item.name || item.code || "نقطة مساحية");
 
-  const marker = L.circleMarker([item.lat, item.lng], {
-    radius: 6,
-    color: "#ffffff",
-    weight: 2,
-    fillColor: color,
-    fillOpacity: 0.95,
+  // النصف الأيسر للحالة، والنصف الأيمن للنوع.
+  const marker = L.marker([item.lat, item.lng], {
+    icon: L.divIcon({
+      className: "survey-split-marker-wrap",
+      html: `<span class="survey-split-marker" style="--status-color:${statusColor};--type-color:${typeColor}" aria-label="الحالة والنوع"></span>`,
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
+      tooltipAnchor: [8, -8]
+    }),
+    keyboard: true,
+    title: label
   });
 
   marker.bindTooltip(escapeHtml(label), {
     permanent: true,
     direction: "top",
-    offset: [10, -10],
+    offset: [0, -8],
     opacity: 1,
     className: "survey-point-label",
     interactive: false,
-    bubblingMouseEvents: false,
+    bubblingMouseEvents: false
   });
 
   marker.on("click", () => {
@@ -627,7 +588,6 @@ function createSurveyMarker(item) {
   marker.__surveyItem = item;
   return marker;
 }
-
 
 
 // ===============================

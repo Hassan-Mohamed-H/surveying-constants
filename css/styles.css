@@ -1745,3 +1745,103 @@ body.dark-mode #resetSurveyFilters:hover { background: rgba(45, 212, 191, 0.17);
   .panel-row strong { max-width: 42%; white-space: normal; }
   .panel-row span { max-width: 58%; overflow-wrap: anywhere; }
 }
+
+
+
+/* ملخص النقاط بدل الرسوم البيانية */
+.dashboard .summary-group {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.055);
+}
+.dashboard .summary-group h4 {
+  margin: 0 0 9px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--text);
+}
+.summary-list {
+  display: grid;
+  gap: 6px;
+}
+.summary-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 9px;
+  background: rgba(148, 163, 184, 0.10);
+}
+.summary-label {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.summary-dot {
+  display: inline-block;
+  flex: 0 0 12px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--summary-color, #94a3b8);
+  border: 1px solid rgba(255,255,255,.8);
+  box-shadow: 0 0 0 1px rgba(15,23,42,.12);
+}
+.summary-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.summary-count {
+  flex: 0 0 auto;
+  min-width: 28px;
+  padding: 3px 7px;
+  text-align: center;
+  border-radius: 8px;
+  background: rgba(37, 99, 235, .12);
+  color: var(--text);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.summary-empty {
+  color: var(--muted);
+  font-size: 12px;
+  padding: 8px 2px;
+}
+
+/* علامات الخريطة بنصفين: اليسار للحالة واليمين للنوع */
+.survey-split-marker-wrap {
+  background: transparent !important;
+  border: 0 !important;
+}
+.survey-split-marker {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+  background: linear-gradient(
+    to right,
+    var(--status-color, #94a3b8) 0%,
+    var(--status-color, #94a3b8) 50%,
+    var(--type-color, #2563eb) 50%,
+    var(--type-color, #2563eb) 100%
+  );
+  box-shadow: 0 1px 4px rgba(15, 23, 42, .45);
+}
+body.dark-mode .dashboard .summary-group {
+  border-color: rgba(148, 163, 184, .2);
+}
+@media (max-width: 520px) {
+  .dashboard .summary-group { padding: 9px; }
+  .summary-row { padding: 7px; }
+  .summary-name, .summary-count { font-size: 12px; }
+}

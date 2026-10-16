@@ -71,8 +71,16 @@
 
           <section class="panel-section dashboard">
             <h3>ملخص النقاط المساحية</h3>
-            <canvas id="pieChart" height="180"></canvas>
-            <canvas id="barChart" height="180"></canvas>
+
+            <section class="summary-group" aria-labelledby="summaryTypesTitle">
+              <h4 id="summaryTypesTitle">توزيع النقاط حسب النوع</h4>
+              <div id="typeSummaryList" class="summary-list"></div>
+            </section>
+
+            <section class="summary-group" aria-labelledby="summaryStatusesTitle">
+              <h4 id="summaryStatusesTitle">توزيع النقاط حسب الحالة</h4>
+              <div id="statusSummaryList" class="summary-list"></div>
+            </section>
           </section>
 
           <section class="panel-section geojson-tools">
