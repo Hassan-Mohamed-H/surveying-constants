@@ -83,6 +83,8 @@ const GOOGLE_SHEET_URL =
 // ===============================
 
 let currentMapData = [];
+let baseMapData = [];
+let temporaryPoints = [];
 
 let filteredMapData = [];
 
@@ -335,22 +337,16 @@ async function loadData(
       !Array.isArray(loaded) ||
       !loaded.length
     ) {
-      currentMapData = [];
+      baseMapData = [];
+      currentMapData = [...temporaryPoints];
+      filteredMapData = [...currentMapData];
 
-      setData(
-        state,
-        []
-      );
+      setData(state, currentMapData);
+      updateFilteredData(state, filteredMapData);
+      renderSurveyFilters();
 
-      updateFilteredData(
-        state,
-        []
-      );
-
-      updateCounts(
-        0,
-        0
-      );
+      updateCounts(0, currentMapData.length);
+      if (currentMapData.length) await refreshMap();
 
       if (showMessage) {
         notify(
@@ -378,8 +374,8 @@ async function loadData(
     lastDataSignature =
       signature;
 
-    currentMapData =
-      loaded;
+    baseMapData = loaded;
+    currentMapData = [...baseMapData, ...temporaryPoints];
 
     filteredMapData = [...currentMapData];
     renderSurveyFilters();  
@@ -387,12 +383,12 @@ async function loadData(
     // حفظ البيانات في الـstate
     setData(
       state,
-      loaded
+      currentMapData
     );
 
     updateFilteredData(
       state,
-      [...loaded]
+      [...filteredMapData]
     );
 
     // عرض النقاط
@@ -922,95 +918,160 @@ function disableOldHeritageControls() {
 }
 
 // ===============================
-// GeoJSON Tools
+// Import Points (session-only)
 // ===============================
+function closeImportDialog() {
+  if (uiEls.importDialog) uiEls.importDialog.hidden = true;
+}
+
+function getSelectedImportCRS() {
+  const system = document.getElementById("importSystem")?.value;
+  if (system === "egypt") return `EPSG:${document.getElementById("egyptBelt").value}`;
+  const zone = Number(document.getElementById("globalZone").value);
+  const hemisphere = document.getElementById("globalHemisphere").value;
+  return `EPSG:${(hemisphere === "south" ? 32700 : 32600) + zone}`;
+}
+
+function parsePnt(text, crs) {
+  const points = [];
+  for (const [index, rawLine] of text.split(/\r?\n/).entries()) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#") || line.startsWith("//")) continue;
+    const cols = line.includes(",") ? line.split(",") : line.split(/\s+/);
+    if (cols.length < 4) continue;
+    const [number, eastRaw, northRaw, elevationRaw, ...codeParts] = cols.map(v => v.trim());
+    const easting = Number(eastRaw), northing = Number(northRaw);
+    if (!Number.isFinite(easting) || !Number.isFinite(northing)) {
+      if (index === 0 && /point|easting|northing/i.test(line)) continue;
+      continue;
+    }
+    const elevation = Number(elevationRaw);
+    const code = codeParts.join(" ").trim();
+    points.push({
+      name: number || `PNT-${index + 1}`, code: code || number || `PNT-${index + 1}`,
+      pointNumber: number, easting, northing,
+      elevation: Number.isFinite(elevation) ? elevation : null,
+      description: code, type: code || "نقطة مستوردة", status: "غير محدد", crs,
+      source: "temporary-import", temporary: true
+    });
+  }
+  if (!points.length) throw new Error("لم يتم العثور على نقاط PNT صالحة. تأكد من ترتيب الأعمدة والفواصل.");
+  return points;
+}
+
+function parseGeoJSON(text) {
+  const geojson = JSON.parse(text);
+  const features = geojson.type === "FeatureCollection" ? geojson.features :
+    geojson.type === "Feature" ? [geojson] : [];
+  const points = [];
+  for (const feature of features || []) {
+    if (feature?.geometry?.type !== "Point") continue;
+    const coords = feature.geometry.coordinates || [];
+    const lng = Number(coords[0]), lat = Number(coords[1]);
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+    const props = feature.properties || {};
+    const name = String(props.name ?? props.Name ?? props.pointNumber ?? props.Point ?? props.id ?? `GeoJSON-${points.length + 1}`);
+    points.push({
+      ...props, name,
+      code: String(props.code ?? props.Code ?? props.codePoint ?? name),
+      easting: lng, northing: lat,
+      elevation: Number.isFinite(Number(coords[2])) ? Number(coords[2]) : (Number.isFinite(Number(props.elevation ?? props.Elevation)) ? Number(props.elevation ?? props.Elevation) : null),
+      description: String(props.description ?? props.Description ?? ""),
+      type: String(props.type ?? props.Type ?? "نقطة مستوردة"),
+      status: String(props.status ?? props.Status ?? "غير محدد"),
+      crs: "EPSG:4326", source: "temporary-import", temporary: true
+    });
+  }
+  if (!points.length) throw new Error("ملف GeoJSON لا يحتوي على نقاط Point صالحة.");
+  return points;
+}
+
+async function applyTemporaryPoints(points) {
+  temporaryPoints = [...temporaryPoints, ...points];
+  currentMapData = [...baseMapData, ...temporaryPoints];
+  filteredMapData = filterSurveyPoints(currentMapData, selectedFilters);
+  setData(state, currentMapData);
+  updateFilteredData(state, filteredMapData);
+  renderSurveyFilters();
+  await refreshMap();
+  closeImportDialog();
+  notify(`تم استيراد ${points.length} نقطة مؤقتة. ستختفي عند إغلاق الصفحة أو إعادة تحميلها.`);
+}
 
 function bindGeoJsonTools() {
-  if (
-    uiEls.importGeoJsonBtn &&
-    uiEls.geoJsonInput
-  ) {
-    uiEls.importGeoJsonBtn.addEventListener(
-      "click",
-      () => {
-        uiEls.geoJsonInput.click();
-      }
-    );
-
-    uiEls.geoJsonInput.addEventListener(
-      "change",
-      async (event) => {
-        const file =
-          event.target.files?.[0];
-
-        if (!file) {
-          return;
-        }
-
-        try {
-          const text =
-            await file.text();
-
-          const geojson =
-            JSON.parse(text);
-
-          renderImportedGeoJson(
-            geojson
-          );
-
-          notify(
-            "تم استيراد ملف GeoJSON بنجاح."
-          );
-
-        } catch (error) {
-          console.error(
-            "GeoJSON import error:",
-            error
-          );
-
-          notify(
-            "فشل استيراد ملف GeoJSON.",
-            true
-          );
-
-        } finally {
-          uiEls.geoJsonInput.value =
-            "";
-        }
-      }
-    );
+  const dialog = document.getElementById("importDialog");
+  const openBtn = uiEls.importGeoJsonBtn;
+  const fileInput = document.getElementById("importFile");
+  const systemSelect = document.getElementById("importSystem");
+  const egyptWrap = document.getElementById("egyptBeltWrap");
+  const globalWrap = document.getElementById("globalZoneWrap");
+  const zoneSelect = document.getElementById("globalZone");
+  if (zoneSelect && !zoneSelect.options.length) {
+    for (let zone = 1; zone <= 60; zone++) {
+      const option = document.createElement("option");
+      option.value = String(zone);
+      option.textContent = `Zone ${zone}`;
+      if (zone === 36) option.selected = true;
+      zoneSelect.appendChild(option);
+    }
   }
+  const updateSystemFields = () => {
+    const egypt = systemSelect.value === "egypt";
+    egyptWrap.hidden = !egypt;
+    globalWrap.hidden = egypt;
+  };
+  systemSelect?.addEventListener("change", updateSystemFields);
+  updateSystemFields();
+  openBtn?.addEventListener("click", () => { if (dialog) dialog.hidden = false; });
+  document.getElementById("closeImportDialog")?.addEventListener("click", closeImportDialog);
+  document.getElementById("cancelImport")?.addEventListener("click", closeImportDialog);
+  dialog?.addEventListener("click", event => { if (event.target === dialog) closeImportDialog(); });
 
-  // Export
-  if (
-    uiEls.exportGeoJsonBtn
-  ) {
-    uiEls.exportGeoJsonBtn.addEventListener(
-      "click",
-      async () => {
+  document.getElementById("importForm")?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const file = fileInput?.files?.[0];
+    if (!file) { notify("اختر ملف النقاط أولًا.", true); return; }
+    try {
+      showLoading(true);
+      // Detect the file format from its CONTENT first, not only its extension.
+      // Some phones/WhatsApp transfers rename PNT files or remove the .pnt extension.
+      const text = (await file.text()).replace(/^\uFEFF/, "");
+      const extension = file.name.split(".").pop().toLowerCase();
+      const firstChar = text.trimStart().charAt(0);
+      const looksLikeJSON = firstChar === "{" || firstChar === "[";
+      let points;
+      if (looksLikeJSON || extension === "json" || extension === "geojson") {
         try {
-          await downloadGeoJson(
-            currentMapData
-          );
-
-          notify(
-            "تم تصدير النقاط بصيغة GeoJSON."
-          );
-
-        } catch (error) {
-          console.error(
-            "GeoJSON export error:",
-            error
-          );
-
-          notify(
-            "فشل تصدير GeoJSON.",
-            true
-          );
+          points = parseGeoJSON(text);
+        } catch (jsonError) {
+          // If the extension is misleading but the contents are delimited survey rows,
+          // fall back to the PNT parser and return its more relevant validation error.
+          if (looksLikeJSON) throw jsonError;
+          points = parsePnt(text, getSelectedImportCRS());
         }
+      } else {
+        points = parsePnt(text, getSelectedImportCRS());
       }
-    );
-  }
+      await applyTemporaryPoints(points);
+      fileInput.value = "";
+    } catch (error) {
+      console.error("Temporary import error:", error);
+      notify(error.message || "فشل استيراد الملف.", true);
+    } finally {
+      showLoading(false);
+    }
+  });
+
+  // Export base points only; temporary imports are intentionally excluded.
+  uiEls.exportGeoJsonBtn?.addEventListener("click", async () => {
+    try {
+      await downloadGeoJson(baseMapData);
+      notify("تم تصدير النقاط الأساسية بصيغة GeoJSON.");
+    } catch (error) {
+      console.error("GeoJSON export error:", error);
+      notify("فشل تصدير GeoJSON.", true);
+    }
+  });
 }
 
 // ===============================

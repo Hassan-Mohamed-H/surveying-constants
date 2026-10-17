@@ -30,6 +30,8 @@
     />
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
+
+  
   <body>
     <div id="app">
       <div id="map"></div>
@@ -86,10 +88,10 @@
           <section class="panel-section geojson-tools">
             <h3>استيراد وتصدير البيانات</h3>
             <div class="geojson-actions">
-              <button id="importGeoJsonBtn" type="button" class="search-btn">استيراد GeoJSON</button>
+              <button id="importGeoJsonBtn" type="button" class="search-btn">استيراد البيانات</button>
               <button id="exportGeoJsonBtn" type="button" class="search-btn secondary">تصدير البيانات</button>
             </div>
-            <input id="geoJsonInput" type="file" accept=".json,.geojson,application/geo+json" hidden />
+            <input id="geoJsonInput" type="file" accept=".pnt,.json,.geojson,application/geo+json,application/json,text/plain" hidden />
           </section>
         </div>
       </aside>
@@ -97,6 +99,40 @@
       <button id="reopenSidebarBtn" class="sidebar-reopen" type="button" aria-label="فتح لوحة البيانات" title="فتح لوحة البيانات" aria-expanded="false">
         <i data-lucide="panel-right-open"></i>
       </button>
+
+      <div id="importDialog" class="import-dialog-backdrop" hidden role="dialog" aria-modal="true" aria-labelledby="importDialogTitle">
+        <form id="importForm" class="import-dialog">
+          <button type="button" id="closeImportDialog" class="import-close" aria-label="إغلاق">×</button>
+          <h2 id="importDialogTitle">استيراد نقاط مساحية مؤقتة</h2>
+          <p class="import-note">النقاط المستوردة تعمل مع البحث والخريطة والمسارات خلال الجلسة الحالية فقط، ولا تُضاف للمصدر الأساسي.</p>
+          <label for="importSystem">نظام الإحداثيات</label>
+          <select id="importSystem" required>
+            <option value="egypt">النظام المصري</option>
+            <option value="global">النظام العالمي (WGS 84 / UTM)</option>
+          </select>
+          <div id="egyptBeltWrap">
+            <label for="egyptBelt">الحزام المصري</label>
+            <select id="egyptBelt">
+              <option value="22992">Red Belt — EPSG:22992</option>
+              <option value="22994">Blue Belt — EPSG:22994</option>
+              <option value="22993">Purple Belt — EPSG:22993</option>
+            </select>
+          </div>
+          <div id="globalZoneWrap" hidden>
+            <label for="globalZone">UTM Zone</label>
+            <select id="globalZone"></select>
+            <label for="globalHemisphere">نصف الكرة</label>
+            <select id="globalHemisphere"><option value="north">شمالي (N)</option><option value="south">جنوبي (S)</option></select>
+          </div>
+          <label for="importFile">ملف النقاط</label>
+          <input id="importFile" type="file" accept=".pnt,.json,.geojson,application/geo+json,application/json,text/plain" required />
+          <div id="importFileHelp" class="import-note">PNT: رقم النقطة، Easting، Northing، المنسوب، الكود. GeoJSON يُقرأ وفق نظامه القياسي WGS 84.</div>
+          <div class="import-actions">
+            <button type="button" id="cancelImport" class="search-btn secondary">إلغاء</button>
+            <button type="submit" class="search-btn">استيراد النقاط</button>
+          </div>
+        </form>
+      </div>
 
       <div class="floating-controls" id="floatingControls" aria-label="أزرار التحكم">
         <button id="toggleToolsBtn" class="round-btn tools-toggle-btn" type="button" title="فتح أدوات الخريطة" aria-label="فتح أدوات الخريطة" aria-expanded="false">

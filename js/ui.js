@@ -44,6 +44,9 @@ export const uiEls = {
   importGeoJsonBtn: byId("importGeoJsonBtn"),
   exportGeoJsonBtn: byId("exportGeoJsonBtn"),
   geoJsonInput: byId("geoJsonInput"),
+  importDialog: byId("importDialog"),
+  importForm: byId("importForm"),
+  importFile: byId("importFile"),
   pieChart: byId("pieChart"),
   barChart: byId("barChart")
 };

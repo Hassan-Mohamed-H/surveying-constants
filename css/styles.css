@@ -1845,3 +1845,17 @@ body.dark-mode .dashboard .summary-group {
   .summary-row { padding: 7px; }
   .summary-name, .summary-count { font-size: 12px; }
 }
+
+
+/* Temporary point import dialog */
+.import-dialog-backdrop[hidden], #globalZoneWrap[hidden] { display: none !important; }
+.import-dialog-backdrop { position: fixed; inset: 0; z-index: 3000; display: grid; place-items: center; padding: 16px; background: rgba(2, 6, 23, .68); backdrop-filter: blur(4px); }
+.import-dialog { position: relative; width: min(460px, 100%); max-height: min(90vh, 760px); overflow: auto; display: grid; gap: 10px; padding: 24px; border: var(--border); border-radius: 18px; background: var(--bg); color: var(--text); box-shadow: var(--shadow); direction: rtl; }
+.import-dialog h2 { font-size: 19px; margin-bottom: 2px; }
+.import-dialog label { font-size: 13px; font-weight: 700; margin-top: 4px; }
+.import-dialog select, .import-dialog input[type=file] { width: 100%; min-width: 0; padding: 10px; border: var(--border); border-radius: 10px; background: var(--card); color: var(--text); }
+.import-note { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.import-actions { display: flex; gap: 10px; margin-top: 8px; }
+.import-actions button { flex: 1; }
+.import-close { position: absolute; left: 14px; top: 10px; border: 0; background: transparent; color: var(--text); font-size: 27px; cursor: pointer; }
+@media (max-width: 480px) { .import-dialog { padding: 20px 16px; } }
