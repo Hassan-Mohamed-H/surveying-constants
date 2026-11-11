@@ -42,6 +42,7 @@ let map = null;
 let clusterLayer = null;
 
 let markerRefs = [];
+let preparedMarkerData = [];
 
 let userLatLng = null;
 let userMarker = null;
@@ -560,9 +561,21 @@ export function getMap() {
   return map;
 }
 
-// ===============================
-// Marker Color
-// ===============================
+
+export function getVisiblePointsCount() {
+  if (!map) return 0;
+
+  const bounds = map.getBounds();
+
+  return preparedMarkerData.filter((point) => {
+    return bounds.contains([
+      point.lat,
+      point.lng
+    ]);
+  }).length;
+}
+
+
 
 // ===============================
 // Create Marker
@@ -636,6 +649,8 @@ export async function setMarkers(
     await prepareMapData(
       data
     );
+
+  preparedMarkerData = preparedData;  
 
   if (
     !preparedData.length

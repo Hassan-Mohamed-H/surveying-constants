@@ -6,6 +6,7 @@ import {
   initMap,
   getMap,
   setMarkers,
+  getVisiblePointsCount,
   focusPoint,
   convertSurveyPoint,
   resetExtent,
@@ -276,6 +277,19 @@ function renderSurveyCharts(items = []) {
 } 
 
 
+
+// ===============================
+// update Visible Points Count
+// ===============================
+
+function updateVisiblePointsCount() {
+  const visibleCount = getVisiblePointsCount();
+
+  updateCounts(
+    visibleCount,
+    currentMapData.length
+  );
+}
 // ===============================
 // Refresh Map
 // ===============================
@@ -289,10 +303,7 @@ async function refreshMap() {
         filteredMapData
       );
 
-    updateCounts(
-      preparedData.length,
-      currentMapData.length
-    );
+    updateVisiblePointsCount();
     renderSurveyCharts(filteredMapData);
 
     updateNearest(
@@ -1198,6 +1209,12 @@ async function bootstrap() {
   try {
     // Initialize Map
     initMap();
+
+    const map = getMap();
+
+    map.on("moveend", () => {
+      updateVisiblePointsCount();
+    });
 
     // UI
     bindSidebarToggle();
