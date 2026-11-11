@@ -19,6 +19,10 @@ import {
   findNearestSite,
   exportToGeoJson,
   downloadGeoJson,
+  downloadPnt,
+  downloadCsv,
+  downloadSdr33,
+  downloadDxf,
   renderImportedGeoJson,
   openSidePanel,
   closeSidePanel
@@ -444,44 +448,73 @@ function startAutoRefresh() {
 // Search
 // ===============================
 
-function getSearchResults(
-  query
-) {
-  const value =
-    String(query || "")
-      .trim()
-      .toLowerCase();
+function getSearchResults(query) {
+  const value = String(query || "")
+    .trim()
+    .toLowerCase();
 
   if (!value) {
     return [];
   }
 
   return currentMapData
-    .filter((item) => {
-      const searchable = [
-        item.name,
-        item.code,
-        item.description,
-        item.type,
-        item.status,
-        item.crs,
-        item.northing,
-        item.easting,
-        item.elevation
-      ]
-        .filter(
-          (value) =>
-            value !== null &&
-            value !== undefined
-        )
-        .join(" ")
-        .toLowerCase();
+    .map((item, index) => {
+      const name = String(item.name ?? "").toLowerCase();
+      const code = String(item.code ?? "").toLowerCase();
 
-      return searchable.includes(
-        value
-      );
+      let priority = 6;
+
+      if (name === value) {
+        priority = 0;
+      }
+
+      else if (code === value) {
+        priority = 1;
+      }
+
+      else if (name.startsWith(value)) {
+        priority = 2;
+      }
+
+      else if (code.startsWith(value)) {
+        priority = 3;
+      }
+
+      else if (name.includes(value)) {
+        priority = 4;
+      }
+
+      else if (code.includes(value)) {
+        priority = 5;
+      }
+
+      else {
+        const searchable = [
+          item.description,
+          item.type,
+          item.status,
+          item.crs,
+          item.northing,
+          item.easting,
+          item.elevation
+        ]
+          .filter(v => v !== null && v !== undefined)
+          .join(" ")
+          .toLowerCase();
+
+        if (!searchable.includes(value)) {
+          return null;
+        }
+      }
+
+      return { item, priority, index };
     })
-    .slice(0, 10);
+    .filter(Boolean)
+    .sort((a, b) =>
+      a.priority - b.priority || a.index - b.index
+    )
+    .slice(0, 10)
+    .map(result => result.item);
 }
 
 // ===============================
@@ -707,10 +740,6 @@ function bindMapControls() {
         if (
           current === "light"
         ) {
-          next = "dark";
-        } else if (
-          current === "dark"
-        ) {
           next =
             "satellite";
         } else {
@@ -724,8 +753,6 @@ function bindMapControls() {
         const messages = {
           light:
             "تم تفعيل الخريطة الفاتحة.",
-          dark:
-            "تم تفعيل الخريطة الداكنة.",
           satellite:
             "تم تفعيل الخريطة الفضائية."
         };
@@ -1063,13 +1090,66 @@ function bindGeoJsonTools() {
   });
 
   // Export base points only; temporary imports are intentionally excluded.
-  uiEls.exportGeoJsonBtn?.addEventListener("click", async () => {
+  const exportDialog = document.getElementById("exportDialog");
+  const exportFormatSelect = document.getElementById("exportFormatSelect");
+  const exportCrsSelect = document.getElementById("exportCrsSelect");
+  const exportCrsWrap = document.getElementById("exportCrsWrap");
+  const exportCrsHelp = document.getElementById("exportCrsHelp");
+
+  const closeExportDialog = () => {
+    if (exportDialog) exportDialog.hidden = true;
+  };
+
+  const updateExportCrsVisibility = () => {
+    const isGeoJSON = exportFormatSelect?.value === "geojson";
+    if (exportCrsWrap) exportCrsWrap.hidden = isGeoJSON;
+    if (exportCrsHelp) {
+      exportCrsHelp.textContent = isGeoJSON
+        ? "GeoJSON يُصدَّر دائمًا بإحداثيات WGS 84 الجغرافية (EPSG:4326) وفقًا للمواصفة."
+        : "سيتم تحويل إحداثيات النقاط إلى نظام الإحداثيات المحدد قبل إنشاء الملف.";
+    }
+  };
+
+  // Clicking the export button opens the options window; export starts after confirmation.
+  uiEls.exportGeoJsonBtn?.addEventListener("click", () => {
+    if (exportDialog) exportDialog.hidden = false;
+    updateExportCrsVisibility();
+  });
+  exportFormatSelect?.addEventListener("change", updateExportCrsVisibility);
+  document.getElementById("closeExportDialog")?.addEventListener("click", closeExportDialog);
+  document.getElementById("cancelExport")?.addEventListener("click", closeExportDialog);
+  exportDialog?.addEventListener("click", event => {
+    if (event.target === exportDialog) closeExportDialog();
+  });
+
+  document.getElementById("exportForm")?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const format = exportFormatSelect?.value || "geojson";
+    const targetCRS = exportCrsSelect?.value || "EPSG:32636";
     try {
-      await downloadGeoJson(baseMapData);
-      notify("تم تصدير النقاط الأساسية بصيغة GeoJSON.");
+      showLoading(true);
+      if (format === "csv") {
+        await downloadCsv(baseMapData, targetCRS);
+        notify(`تم تصدير النقاط الأساسية بصيغة CSV بنظام ${targetCRS}.`);
+      } else if (format === "pnt") {
+        await downloadPnt(baseMapData, targetCRS);
+        notify(`تم تصدير النقاط الأساسية بصيغة PNT بنظام ${targetCRS}.`);
+      } else if (format === "sdr") {
+        await downloadSdr33(baseMapData, targetCRS);
+        notify(`تم تصدير النقاط الأساسية بصيغة Sokkia SDR33 بنظام ${targetCRS}.`);
+      } else if (format === "dxf") {
+        await downloadDxf(baseMapData, targetCRS);
+        notify(`تم تصدير النقاط الأساسية بصيغة DXF بنظام ${targetCRS}.`);
+      } else {
+        await downloadGeoJson(baseMapData);
+        notify("تم تصدير النقاط الأساسية بصيغة GeoJSON بنظام WGS 84.");
+      }
+      closeExportDialog();
     } catch (error) {
-      console.error("GeoJSON export error:", error);
-      notify("فشل تصدير GeoJSON.", true);
+      console.error("Survey data export error:", error);
+      notify(error.message || "فشل تصدير البيانات.", true);
+    } finally {
+      showLoading(false);
     }
   });
 }

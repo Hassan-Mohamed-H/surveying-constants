@@ -10,8 +10,8 @@ import { getTypeColor, getStatusColor } from "./colors.js";
 // Map Constants
 // ===============================
 
-const DEFAULT_CENTER = [26.1551, 32.7160];
-const DEFAULT_ZOOM = 9;
+const DEFAULT_CENTER = [26.8206, 30.8025];
+const DEFAULT_ZOOM = 6;
 
 const FALLBACK_COLORS = [
   "#ef4444",
@@ -57,7 +57,7 @@ let geoJsonLayer = null;
 let activeTileName = "light";
 
 let lightLayer = null;
-let darkLayer = null;
+
 let satelliteLayer = null;
 
 let routingMode = false;
@@ -391,6 +391,29 @@ async function updateLatestImagery() {
       return;
     }
 
+    console.log("========== WAYBACK DEBUG ==========");
+
+    console.log("Map Center:", {
+      latitude: center.lat,
+      longitude: center.lng
+    });
+
+    console.log("Current Zoom:", zoom);
+
+    console.log("Available Versions:");
+
+    console.table(
+      versions.map((version, index) => ({
+        index,
+        releaseDate: version.releaseDateLabel,
+        releaseDatetime: version.releaseDatetime,
+        releaseNum: version.releaseNum,
+        itemTitle: version.itemTitle
+      }))
+    );
+
+    console.log("===================================");
+
     const latestVersion = versions[0];
 
     const tileUrl = latestVersion.itemURL
@@ -456,15 +479,7 @@ export function initMap() {
     }
   );
 
-  darkLayer = L.tileLayer(
-    "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    {
-      maxZoom: 20,
-      attribution:
-        "&copy; CARTO",
-    }
-  );
-
+  
   satelliteLayer = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     {
@@ -582,6 +597,11 @@ function createSurveyMarker(item) {
   });
 
   marker.on("click", () => {
+  if (measureMode) {
+    addMeasurePoint(marker.getLatLng());
+    return;
+  }
+
     openSidePanel(item);
   });
 
@@ -1292,25 +1312,32 @@ export function addMeasurePoint(
   if (
     measurePoints.length >= 2
   ) {
+    // رسم الخط بين النقطة السابقة والنقطة الحالية
     const previous =
       measurePoints[
         measurePoints.length - 2
       ];
 
     L.polyline(
-      [
-        previous,
-        latlng,
-      ],
+      [previous, latlng],
       {
         weight: 3,
         dashArray: "6 6",
       }
-    ).addTo(
-      measureLayer
-    );
+    ).addTo(measureLayer);
 
-    const distance = map.distance(previous, latlng);
+    // حساب إجمالي طول المسار بالكامل
+    const distance = measurePoints.reduce(
+      (total, point, index, points) => {
+        if (index === 0) return total;
+
+        return total + map.distance(
+          points[index - 1],
+          point
+        );
+      },
+      0
+    );
 
     const distanceText = distance >= 1000
       ? `${(distance / 1000).toFixed(2)} كم`
@@ -1318,6 +1345,7 @@ export function addMeasurePoint(
 
     // تحديث خانة المسافة في السايد بار
     const distanceElement = document.getElementById("nearestDistance");
+
 
     if (distanceElement) {
       distanceElement.textContent = distanceText;
@@ -1354,11 +1382,7 @@ export function setBaseLayer(
     );
   }
 
-  if (darkLayer) {
-    map.removeLayer(
-      darkLayer
-    );
-  }
+
 
   if (satelliteLayer) {
     map.removeLayer(
@@ -1367,10 +1391,7 @@ export function setBaseLayer(
   }
 
   switch (type) {
-    case "dark":
-      darkLayer?.addTo(map);
-      activeTileName = "dark";
-      break;
+
 
     case "satellite":
       satelliteLayer?.addTo(map);
@@ -1561,58 +1582,285 @@ export async function exportToGeoJson(
 }
 
 // ===============================
-// Download GeoJSON
+// Export helpers
 // ===============================
 
-export async function downloadGeoJson(
-  data = []
-) {
-  const geojson =
-    await exportToGeoJson(
-      data
-    );
-
-  const blob =
-    new Blob(
-      [
-        JSON.stringify(
-          geojson,
-          null,
-          2
-        ),
-      ],
-      {
-        type:
-          "application/geo+json",
-      }
-    );
-
-  const url =
-    URL.createObjectURL(
-      blob
-    );
-
-  const link =
-    document.createElement(
-      "a"
-    );
-
+function downloadTextFile(content, filename, mimeType = "text/plain;charset=utf-8", withBom = true) {
+  const blob = new Blob([...(withBom ? ["\uFEFF"] : []), content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
   link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
-  link.download =
-    "survey-control-points.geojson";
+function csvCell(value) {
+  const text = String(value ?? "");
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
 
-  document.body.appendChild(
-    link
+function validateSurveyExport(data = []) {
+  if (!Array.isArray(data) || data.length === 0) {
+    throw new Error("لا توجد نقاط أساسية لتصديرها.");
+  }
+  const invalid = data.find(item =>
+    !Number.isFinite(Number(item.easting)) ||
+    !Number.isFinite(Number(item.northing)) ||
+    !Number.isFinite(Number(item.elevation ?? 0))
   );
+  if (invalid) throw new Error(`إحداثيات النقطة ${invalid.name ?? "بدون اسم"} غير مكتملة.`);
+  const crsValues = [...new Set(data.map(item => normalizeCRS(item.crs)).filter(Boolean))];
+  if (crsValues.length > 1) {
+    throw new Error("النقاط تحتوي على أنظمة إحداثيات مختلفة. وحّد نظام الإحداثيات قبل تصدير PNT أو SDR أو DXF.");
+  }
+  if (data.some(item => !normalizeCRS(item.crs))) {
+    throw new Error("يوجد نقاط بدون نظام إحداثيات محدد. لا يمكن ضمان صحة ملف الرفع.");
+  }
+}
 
+export function downloadPnt(data = []) {
+  validateSurveyExport(data);
+  const rows = data.map(item => [
+    item.name ?? "",
+    Number(item.easting).toFixed(4),
+    Number(item.northing).toFixed(4),
+    Number(item.elevation ?? 0).toFixed(4),
+    item.code ?? "",
+  ].map(csvCell).join(","));
+  downloadTextFile(rows.join("\r\n"), "survey-control-points.pnt");
+}
+
+
+export async function downloadCsv(data = [], targetCRS = null) {
+  validateSurveyExport(data);
+
+  const outputCRS = normalizeCRS(targetCRS || data[0].crs);
+
+  if (!outputCRS) {
+    throw new Error("نظام الإحداثيات المحدد غير صالح.");
+  }
+
+  await loadCRSDefinition(outputCRS);
+
+  const rows = [];
+
+  for (const item of data) {
+    const sourceCRS = normalizeCRS(item.crs);
+
+    await loadCRSDefinition(sourceCRS);
+
+    let easting = Number(item.easting);
+    let northing = Number(item.northing);
+
+    if (sourceCRS !== outputCRS) {
+      const converted = proj4(
+        sourceCRS,
+        outputCRS,
+        [easting, northing]
+      );
+
+      easting = converted[0];
+      northing = converted[1];
+    }
+
+    if (!Number.isFinite(easting) || !Number.isFinite(northing)) {
+      throw new Error(`تعذر تحويل إحداثيات النقطة ${item.name || ""}.`);
+    }
+
+    const precision = outputCRS === "EPSG:4326" ? 8 : 4;
+
+    rows.push([
+      item.name ?? "",
+      easting.toFixed(precision),
+      northing.toFixed(precision),
+      Number(item.elevation ?? 0).toFixed(4),
+      item.code ?? "",
+      outputCRS
+    ]);
+  }
+
+  const headers = [
+    "Name",
+    "Easting",
+    "Northing",
+    "Elevation",
+    "Code",
+    "CRS"
+  ];
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(csvCell).join(","))
+    .join("\r\n");
+
+  const fileName = `survey-control-points-${outputCRS.replace(":", "-")}.csv`;
+
+  downloadTextFile(
+    csvContent,
+    fileName,
+    "text/csv;charset=utf-8",
+    true
+  );
+}
+
+
+function sdrNumber(value) {
+  return Number(value ?? 0).toFixed(4);
+}
+
+export function downloadSdr33(data = []) {
+  validateSurveyExport(data);
+  const now = new Date();
+  const date = `${String(now.getDate()).padStart(2, "0")}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getFullYear()).slice(-2)}`;
+  const time = `${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+  const lines = [
+    "00NMSDR33 V04-04.02     00-000-00 00:00 211111",
+    `10NMCONTROL            ${date}${time}`,
+    "06NM1.00000000      ",
+    "01NM:SET5F V01-00    020078                      31                                0.00000000      ",
+    "13PCP.C. mm Applied:-30.000",
+  ];
+  data.forEach((item, index) => {
+    const pointName = String(item.name ?? index + 1).slice(0, 16).padEnd(16, " ");
+    const northing = sdrNumber(item.northing).padStart(16, " ");
+    const easting = sdrNumber(item.easting).padStart(16, " ");
+    const elevation = sdrNumber(item.elevation).padStart(16, " ");
+    const code = String(item.code ?? "").slice(0, 16).padEnd(16, " ");
+    lines.push(`08TP${pointName}${northing}${easting}${elevation}${code}`);
+  });
+  downloadTextFile(lines.join("\r\n") + "\r\n", "CONTROL.SDR", "text/plain;charset=ascii", false);
+}
+
+// ===============================
+// DXF export (كل بيان في حقل مستقل)
+// ===============================
+// كل نقطة تتصدّر كـ:
+//   INSERT واحد لبلوك SURVEY_POINT على طبقة CONTROL_POINTS
+//   (من غير POINT منفصل عشان ما تتكررش النقطة في ArcGIS)،
+//   وبداخله ATTRIB منفصل لكل حقل (Name, Code, Easting, ...).
+// الحقول المطلوبة وترتيبها — عدّل هذه القائمة لإضافة/حذف أي حقل.
+// visible=true يعني يظهر كنص على الرسم، والباقي مخفي لكنه موجود كحقل بيانات.
+const DXF_FIELDS = [
+  { tag: "NAME",      label: "Name",      visible: true  },
+  { tag: "CODE",      label: "Code",      visible: false },
+  { tag: "EASTING",   label: "Easting",   visible: false },
+  { tag: "NORTHING",  label: "Northing",  visible: false },
+  { tag: "ELEVATION", label: "Elevation", visible: false },
+  { tag: "TYPE",      label: "Type",      visible: false },
+  { tag: "STATUS",    label: "Status",    visible: false },
+  { tag: "CRS",       label: "CRS",       visible: false },
+];
+
+function dxfPair(code, value) { return `${code}\r\n${value}\r\n`; }
+
+function dxfText(value) {
+  return String(value ?? "").replace(/[\r\n]+/g, " ").trim().slice(0, 240);
+}
+
+export async function downloadDxf(data = [], targetCRS = null) {
+  validateSurveyExport(data);
+
+  const outputCRS = normalizeCRS(targetCRS || data[0].crs);
+  if (!outputCRS) throw new Error("نظام الإحداثيات المحدد غير صالح.");
+  await loadCRSDefinition(outputCRS);
+
+  const BLOCK_NAME = "SURVEY_POINT";
+  const TEXT_H = 1.0;
+  const precision = outputCRS === "EPSG:4326" ? 8 : 4;
+
+  let dxf = "";
+
+  // HEADER
+  dxf += dxfPair(0, "SECTION") + dxfPair(2, "HEADER");
+  dxf += dxfPair(9, "$ACADVER") + dxfPair(1, "AC1009");
+  dxf += dxfPair(0, "ENDSEC");
+
+  // TABLES
+  dxf += dxfPair(0, "SECTION") + dxfPair(2, "TABLES");
+  dxf += dxfPair(0, "TABLE") + dxfPair(2, "LAYER") + dxfPair(70, 2);
+  dxf += dxfPair(0, "LAYER") + dxfPair(2, "CONTROL_POINTS") + dxfPair(70, 0) + dxfPair(62, 7) + dxfPair(6, "CONTINUOUS");
+  dxf += dxfPair(0, "LAYER") + dxfPair(2, "POINT_LABELS") + dxfPair(70, 0) + dxfPair(62, 3) + dxfPair(6, "CONTINUOUS");
+  dxf += dxfPair(0, "ENDTAB") + dxfPair(0, "ENDSEC");
+
+  // BLOCKS: تعريف البلوك + ATTDEF لكل حقل
+  dxf += dxfPair(0, "SECTION") + dxfPair(2, "BLOCKS");
+  dxf += dxfPair(0, "BLOCK") + dxfPair(8, "0") + dxfPair(2, BLOCK_NAME) + dxfPair(70, 2);
+  dxf += dxfPair(10, 0) + dxfPair(20, 0) + dxfPair(30, 0) + dxfPair(3, BLOCK_NAME) + dxfPair(1, "");
+  DXF_FIELDS.forEach((f, i) => {
+    dxf += dxfPair(0, "ATTDEF") + dxfPair(8, "POINT_LABELS");
+    dxf += dxfPair(10, 0.5) + dxfPair(20, 0.5 - i * TEXT_H * 1.5) + dxfPair(30, 0);
+    dxf += dxfPair(40, TEXT_H) + dxfPair(1, "") + dxfPair(2, f.tag) + dxfPair(3, f.label);
+    dxf += dxfPair(70, f.visible ? 0 : 1);
+  });
+  dxf += dxfPair(0, "ENDBLK") + dxfPair(8, "0");
+  dxf += dxfPair(0, "ENDSEC");
+
+  // ENTITIES
+  dxf += dxfPair(0, "SECTION") + dxfPair(2, "ENTITIES");
+
+  for (const [index, item] of data.entries()) {
+    const sourceCRS = normalizeCRS(item.crs);
+    await loadCRSDefinition(sourceCRS);
+
+    let easting = Number(item.easting);
+    let northing = Number(item.northing);
+    const elevation = Number(item.elevation ?? 0);
+
+    if (sourceCRS !== outputCRS) {
+      [easting, northing] = proj4(sourceCRS, outputCRS, [easting, northing]);
+    }
+    if (!Number.isFinite(easting) || !Number.isFinite(northing)) {
+      throw new Error(`تعذر تحويل إحداثيات النقطة ${item.name || ""}.`);
+    }
+
+    const values = {
+      NAME: dxfText(item.name ?? index + 1),
+      CODE: dxfText(item.code),
+      EASTING: easting.toFixed(precision),
+      NORTHING: northing.toFixed(precision),
+      ELEVATION: elevation.toFixed(4),
+      TYPE: dxfText(item.type),
+      STATUS: dxfText(item.status),
+      CRS: outputCRS,
+    };
+
+    // البلوك + الحقول (ATTRIB) — الـ 66=1 تعني "بعدها ATTRIB"
+    dxf += dxfPair(0, "INSERT") + dxfPair(8, "CONTROL_POINTS") + dxfPair(66, 1) + dxfPair(2, BLOCK_NAME);
+    dxf += dxfPair(10, easting) + dxfPair(20, northing) + dxfPair(30, elevation);
+
+    DXF_FIELDS.forEach((f, i) => {
+      dxf += dxfPair(0, "ATTRIB") + dxfPair(8, "POINT_LABELS");
+      dxf += dxfPair(10, easting + 0.5) + dxfPair(20, northing + 0.5 - i * TEXT_H * 1.5) + dxfPair(30, elevation);
+      dxf += dxfPair(40, TEXT_H) + dxfPair(1, values[f.tag]) + dxfPair(2, f.tag);
+      dxf += dxfPair(70, f.visible ? 0 : 1);
+    });
+    dxf += dxfPair(0, "SEQEND") + dxfPair(8, "CONTROL_POINTS");
+  }
+
+  dxf += dxfPair(0, "ENDSEC") + dxfPair(0, "EOF");
+
+  downloadTextFile(
+    dxf,
+    `survey-control-points-${outputCRS.replace(":", "-")}.dxf`,
+    "application/dxf;charset=utf-8",
+    false
+  );
+}
+
+export async function downloadGeoJson(data = []) {
+  const geojson = await exportToGeoJson(data);
+  const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: "application/geo+json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "survey-control-points.geojson";
+  document.body.appendChild(link);
   link.click();
 
   link.remove();
-
-  URL.revokeObjectURL(
-    url
-  );
+  URL.revokeObjectURL(url);
 }
 
 // ===============================

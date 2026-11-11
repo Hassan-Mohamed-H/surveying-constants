@@ -54,13 +54,13 @@
           ❮
         </button>
         <div class="sidebar-content">
-          <h2>نقاط التحكم المساحية</h2>
+          <h2>نقاط التحكم المساحية "مشروع الألف فدان"</h2>
           <section class="panel-section">
             <h3>عرض البيانات</h3>
             <p class="survey-help">تُعرض النقاط وفق الإحداثيات ونظام CRS المحدد لكل نقطة في جدول البيانات.</p>
           </section>
           <div id="categoryFilters" class="filters"></div>
-          <section class="legend-wrap">
+          <section class="legend-wrap">  
             <h3>دليل الحالات</h3>
             <div id="legend" class="legend"></div>
           </section>
@@ -130,6 +130,43 @@
           <div class="import-actions">
             <button type="button" id="cancelImport" class="search-btn secondary">إلغاء</button>
             <button type="submit" class="search-btn">استيراد النقاط</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="exportDialog" class="import-dialog-backdrop" hidden role="dialog" aria-modal="true" aria-labelledby="exportDialogTitle">
+        <form id="exportForm" class="import-dialog">
+          <button type="button" id="closeExportDialog" class="import-close" aria-label="إغلاق">×</button>
+          <h2 id="exportDialogTitle">تصدير البيانات المساحية</h2>
+          <p class="import-note">حدد صيغة الملف ونظام الإحداثيات المطلوب، ثم اضغط على «بدء التصدير».</p>
+          <label for="exportFormatSelect">صيغة الملف</label>
+          <select id="exportFormatSelect" required>
+            <option value="geojson">GeoJSON</option>
+            <option value="csv">CSV</option>
+            <option value="pnt">PNT</option>
+            <option value="sdr">SDR33</option>
+            <option value="dxf">DXF</option>
+          </select>
+          <div id="exportCrsWrap">
+            <label for="exportCrsSelect">نظام الإحداثيات للملف</label>
+            <select id="exportCrsSelect" required>
+              <optgroup label="الأنظمة المصرية">
+                <option value="EPSG:22992">Red Belt — EPSG:22992</option>
+                <option value="EPSG:22994">Blue Belt — EPSG:22994</option>
+                <option value="EPSG:22993">Purple Belt — EPSG:22993</option>
+              </optgroup>
+              <optgroup label="WGS 84 / UTM">
+                <option value="EPSG:32635">UTM Zone 35N — EPSG:32635</option>
+                <option value="EPSG:32636" selected>UTM Zone 36N — EPSG:32636</option>
+                <option value="EPSG:32637">UTM Zone 37N — EPSG:32637</option>
+                <option value="EPSG:4326">Geographic WGS 84 — EPSG:4326</option>
+              </optgroup>
+            </select>
+          </div>
+          <p id="exportCrsHelp" class="import-note">سيتم تحويل إحداثيات النقاط إلى النظام المحدد قبل إنشاء الملف.</p>
+          <div class="import-actions">
+            <button type="button" id="cancelExport" class="search-btn secondary">إلغاء</button>
+            <button type="submit" class="search-btn">بدء التصدير</button>
           </div>
         </form>
       </div>

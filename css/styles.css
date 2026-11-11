@@ -1610,47 +1610,48 @@ body.dark-mode #resetSurveyFilters:hover { background: rgba(45, 212, 191, 0.17);
 }
 
 
-/* قائمة أدوات الخريطة القابلة للفتح على شاشات الهاتف فقط */
-.tools-toggle-btn {
+/* قائمة أدوات الخريطة على جميع الشاشات */
+.floating-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px;
+  scrollbar-width: none;
+}
+
+.floating-controls::-webkit-scrollbar {
   display: none;
 }
 
-@media (max-width: 520px) {
-  .floating-controls {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    max-height: calc(100dvh - 180px);
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 4px;
-    scrollbar-width: none;
-  }
-
-  .floating-controls::-webkit-scrollbar {
-    display: none;
-  }
-
-  .floating-controls .tools-toggle-btn {
-    display: flex;
-    flex: 0 0 auto;
-    order: -1;
-    background: #0755c9;
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.35);
-  }
-
-  .floating-controls:not(.tools-expanded) .round-btn:not(.tools-toggle-btn) {
-    display: none;
-  }
-
-  .floating-controls.tools-expanded .round-btn:not(.tools-toggle-btn) {
-    display: flex;
-    flex: 0 0 auto;
-  }
+.floating-controls .tools-toggle-btn {
+  display: flex;
+  flex: 0 0 auto;
+  order: -1;
+  background: #0755c9;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
+.floating-controls:not(.tools-expanded) .round-btn:not(.tools-toggle-btn) {
+  display: none;
+}
+
+.floating-controls.tools-expanded .round-btn:not(.tools-toggle-btn) {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+/* ضبط المسافات على الهاتف */
+@media (max-width: 520px) {
+  .floating-controls {
+    gap: 7px;
+    max-height: calc(100dvh - 180px);
+  }
+}
 
 /* تحسينات الخطوة الثانية: لوحة البيانات وإخفاؤها بالكامل على الهاتف */
 .sidebar-reopen {
